@@ -1,4 +1,4 @@
-mmocr
 output
+.idea
 *.pyc
 *.log
