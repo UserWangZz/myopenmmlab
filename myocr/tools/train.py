@@ -1,15 +1,14 @@
 import argparse
-import copy
 import os
 import os.path as osp
 import time
 import warnings
 
 import torch
-import mycv
 
-from mycv.utils import Config, DictAction, mkdir_or_exist
-from myocr.myocr.utils import setup_multi_processes, get_root_logger, collect_env
+import mycv
+from mycv.utils import Config, DictAction
+from myocr.myocr.utils import get_root_logger, collect_env
 
 
 def parse_args(arg_list=None):
@@ -114,6 +113,9 @@ def run_train_cmd(args):
     dash_line = '-' * 60 + '\n'
     logger.info('Environment info:\n' + dash_line + env_info + '\n' +
                 dash_line)
+    meta['env_info'] = env_info
+    meta['config'] = cfg.pretty_text
+
 
 
 def main():
