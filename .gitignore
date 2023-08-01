@@ -1,1 +1,4 @@
 mmocr
+output
+*.pyc
+*.log
