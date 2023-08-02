@@ -8,8 +8,11 @@ import torch
 
 import mycv
 from mycv.utils import Config, DictAction
-from myocr.myocr.utils import get_root_logger, collect_env
+from mycv.runner import set_random_seed
 
+from myocr.myocr.utils import get_root_logger, collect_env
+from myocr.myocr.apis import init_random_seed
+from myocr.myocr.models import build_detector
 
 def parse_args(arg_list=None):
     parser = argparse.ArgumentParser(description='Train a detector.')
@@ -115,7 +118,24 @@ def run_train_cmd(args):
                 dash_line)
     meta['env_info'] = env_info
     meta['config'] = cfg.pretty_text
+    # log some basic info
+    # 日志输出一些基本信息
+    logger.info(f'Config:\n{cfg.pretty_text}')
 
+    # 设置随机种子
+    print(args)
+    seed = init_random_seed(args.seed)
+    logger.info(f'Set random seed to {seed}')
+    set_random_seed(seed)
+    cfg.seed = seed
+    meta['seed'] = seed
+    meta['exp_name'] = osp.basename(args.config)
+
+    model = build_detector(
+        cfg.model,
+        train_cfg=cfg.get('train_cfg'),
+        test_cfg=cfg.get('test_cfg'))
+    model.init_weights()
 
 
 def main():

@@ -6,7 +6,7 @@ from collections import defaultdict
 import cv2
 import torch
 
-import mmcv
+import mycv
 from .parrots_wrapper import get_build_config
 
 
@@ -29,9 +29,9 @@ def collect_env():
                 ``torch.__config__.show()``.
             - TorchVision (optional): TorchVision version.
             - OpenCV: OpenCV version.
-            - MMCV: MMCV version.
-            - MMCV Compiler: The GCC version for compiling MMCV ops.
-            - MMCV CUDA Compiler: The CUDA version for compiling MMCV ops.
+            - MYCV: MMCV version.
+            - MYCV Compiler: The GCC version for compiling MMCV ops.
+            - MYCV CUDA Compiler: The CUDA version for compiling MMCV ops.
     """
     env_info = {}
     env_info['sys.platform'] = sys.platform
@@ -115,10 +115,10 @@ def collect_env():
 
     env_info['OpenCV'] = cv2.__version__
 
-    env_info['MYCV'] = mmcv.__version__
+    env_info['MYCV'] = mycv.__version__
 
     try:
-        from mmcv.ops import get_compiler_version, get_compiling_cuda_version
+        from mycv.ops import get_compiler_version, get_compiling_cuda_version
     except ModuleNotFoundError:
         env_info['MYCV Compiler'] = 'n/a'
         env_info['MYCV CUDA Compiler'] = 'n/a'
