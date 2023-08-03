@@ -1,7 +1,7 @@
 model = dict(
     type='FCENet',
     backbone=dict(
-        type='mmdet.ResNet',
+        type='ResNet',
         depth=50,
         num_stages=4,
         out_indices=(1, 2, 3),
