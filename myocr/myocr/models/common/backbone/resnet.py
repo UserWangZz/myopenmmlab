@@ -6,8 +6,8 @@ from mmcv.cnn import build_conv_layer, build_norm_layer, build_plugin_layer
 from mmcv.runner import BaseModule
 from torch.nn.modules.batchnorm import _BatchNorm
 
-from ..builder import BACKBONES
-from ..utils import ResLayer
+from myocr.myocr.models.builder import BACKBONES
+from myocr.myocr.models.utils import ResLayer
 
 
 class BasicBlock(BaseModule):

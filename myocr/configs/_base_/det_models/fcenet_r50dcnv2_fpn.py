@@ -13,7 +13,7 @@ model = dict(
         init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50'),
         stage_with_dcn=(False, True, True, True)),
     neck=dict(
-        type='mmdet.FPN',
+        type='FPN',
         in_channels=[512, 1024, 2048],
         out_channels=256,
         add_extra_convs='on_output',

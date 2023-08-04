@@ -15,7 +15,7 @@ from myocr.myocr.apis import init_random_seed
 from myocr.myocr.models import build_detector
 
 def parse_args(arg_list=None):
-    parser = argparse.ArgumentParser(description='Train a detector.')
+    parser = argparse.ArgumentParser(description='Train a detectors.')
     parser.add_argument('config', help='Train config file path.')
     parser.add_argument('--work-dir', help='The dir to save logs and models.')
     parser.add_argument(
