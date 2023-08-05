@@ -6,6 +6,12 @@ import torch.nn as nn
 from .registry import NORM_LAYERS
 from mycv.utils.parrots_wrapper import _InstanceNorm, _BatchNorm, SyncBatchNorm
 
+
+NORM_LAYERS.register_module('BN', module=nn.BatchNorm2d)
+NORM_LAYERS.register_module('BN1d', module=nn.BatchNorm1d)
+NORM_LAYERS.register_module('BN2d', module=nn.BatchNorm2d)
+NORM_LAYERS.register_module('BN3d', module=nn.BatchNorm3d)
+
 def infer_abbr(class_type):
     """Infer abbreviation from the class name.
 
