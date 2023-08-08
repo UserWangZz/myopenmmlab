@@ -21,7 +21,7 @@ import torch
 3. `load_ext` 函数负责加载指定扩展模块，并检查扩展模块中是否包含指定的函数。在加载过程中，
 会将加载成功的函数按照给定的函数名构成一个命名元组 `ExtModule` 并返回。
 
-4. `check_ops_exist` 函数用于检查是否存在扩展模块。它通过在 `mmcv._ext` 模块中查找扩展模块来
+4. `check_ops_exist` 函数用于检查是否存在扩展模块。它通过在 `mycv._ext` 模块中查找扩展模块来
 判断是否加载了扩展模块。如果存在扩展模块，则返回 `True`，否则返回 `False`。
 
 总的来说，这些代码用于根据环境情况加载底层扩展模块，以提高计算性能。如果使用的是普通的PyTorch，
@@ -31,7 +31,7 @@ import torch
 if torch.__version__ != 'parrots':
 
     def load_ext(name, funcs):
-        ext = importlib.import_module('mmcv.' + name)
+        ext = importlib.import_module('mycv.' + name)
         for fun in funcs:
             assert hasattr(ext, fun), f'{fun} miss in module {name}'
         return ext

@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
-from mmdet.core import multi_apply
+from myocr.myocr.core import multi_apply
 from torch import nn
 
 from myocr.myocr.models.builder import LOSSES

@@ -1,5 +1,11 @@
 import os
 import os.path as osp
+from pathlib import Path
+
+from .misc import is_str
+
+def is_filepath(x):
+    return is_str(x) or isinstance(x, Path)
 
 def mkdir_or_exist(dir_name, mode=0o777):
     if dir_name == '':

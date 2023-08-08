@@ -1,5 +1,5 @@
-from ..runner import Sequential
-from ..utils import Registry, build_from_cfg
+from mycv.runner import Sequential
+from mycv.utils import Registry, build_from_cfg
 
 
 def build_model_from_cfg(cfg, registry, default_args=None):

@@ -123,7 +123,6 @@ def run_train_cmd(args):
     logger.info(f'Config:\n{cfg.pretty_text}')
 
     # 设置随机种子
-    print(args)
     seed = init_random_seed(args.seed)
     logger.info(f'Set random seed to {seed}')
     set_random_seed(seed)
@@ -136,6 +135,7 @@ def run_train_cmd(args):
         train_cfg=cfg.get('train_cfg'),
         test_cfg=cfg.get('test_cfg'))
     model.init_weights()
+    print(type(model))
 
 
 def main():

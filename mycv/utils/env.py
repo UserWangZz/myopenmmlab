@@ -29,9 +29,9 @@ def collect_env():
                 ``torch.__config__.show()``.
             - TorchVision (optional): TorchVision version.
             - OpenCV: OpenCV version.
-            - MYCV: MMCV version.
-            - MYCV Compiler: The GCC version for compiling MMCV ops.
-            - MYCV CUDA Compiler: The CUDA version for compiling MMCV ops.
+            - MYCV: MYCV version.
+            - MYCV Compiler: The GCC version for compiling MYCV ops.
+            - MYCV CUDA Compiler: The CUDA version for compiling MYCV ops.
     """
     env_info = {}
     env_info['sys.platform'] = sys.platform
@@ -47,7 +47,7 @@ def collect_env():
         for name, device_ids in devices.items():
             env_info['GPU ' + ','.join(device_ids)] = name
 
-        from mmcv.utils.parrots_wrapper import _get_cuda_home
+        from mycv.utils.parrots_wrapper import _get_cuda_home
         CUDA_HOME = _get_cuda_home()
         env_info['CUDA_HOME'] = CUDA_HOME
 

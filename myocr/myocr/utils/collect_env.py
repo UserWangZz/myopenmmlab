@@ -1,5 +1,5 @@
 from mycv.utils import collect_env as collect_base_env
-from mmcv.utils import get_git_hash
+from mycv.utils import get_git_hash
 
 import myocr.myocr as myocr
 

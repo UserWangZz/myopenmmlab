@@ -1,7 +1,7 @@
 import warnings
 
 import cv2
-import mmcv
+import mycv
 import numpy as np
 
 import myocr.myocr.utils as utils
@@ -46,7 +46,7 @@ def imshow_pred_boundary(img,
         return None
 
     utils.valid_boundary(boundaries_with_scores[0])
-    img = mmcv.imread(img)
+    img = mycv.imread(img)
 
     scores = np.array([b[-1] for b in boundaries_with_scores])
     inds = scores > score_thr
@@ -54,8 +54,8 @@ def imshow_pred_boundary(img,
     scores = [scores[i] for i in np.where(inds)[0]]
     labels = [labels[i] for i in np.where(inds)[0]]
 
-    boundary_color = mmcv.color_val(boundary_color)
-    text_color = mmcv.color_val(text_color)
+    boundary_color = mycv.color_val(boundary_color)
+    text_color = mycv.color_val(text_color)
     font_scale = 0.5
 
     for boundary, score in zip(boundaries, scores):
@@ -73,8 +73,8 @@ def imshow_pred_boundary(img,
                         (boundary_int[0], boundary_int[1] - 2),
                         cv2.FONT_HERSHEY_COMPLEX, font_scale, text_color)
     if show:
-        mmcv.imshow(img, win_name, wait_time)
+        mycv.imshow(img, win_name, wait_time)
     if out_file is not None:
-        mmcv.imwrite(img, out_file)
+        mycv.imwrite(img, out_file)
 
     return img

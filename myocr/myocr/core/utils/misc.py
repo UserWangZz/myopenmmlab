@@ -1,4 +1,8 @@
 from functools import partial
+import torch
+import numpy as np
+
+from ..mask.structures import BitmapMasks, PolygonMasks
 
 
 def multi_apply(func, *args, **kwargs):
@@ -21,3 +25,25 @@ def multi_apply(func, *args, **kwargs):
     pfunc = partial(func, **kwargs) if kwargs else func
     map_results = map(pfunc, *args)
     return tuple(map(list, zip(*map_results)))
+
+
+def mask2ndarray(mask):
+    """Convert Mask to ndarray..
+
+    Args:
+        mask (:obj:`BitmapMasks` or :obj:`PolygonMasks` or
+        torch.Tensor or np.ndarray): The mask to be converted.
+
+    Returns:
+        np.ndarray: Ndarray mask of shape (n, h, w) that has been converted
+    """
+    if isinstance(mask, (BitmapMasks, PolygonMasks)):
+        mask = mask.to_ndarray()
+    elif isinstance(mask, torch.Tensor):
+        mask = mask.detach().cpu().numpy()
+    elif not isinstance(mask, np.ndarray):
+        raise TypeError(f'Unsupported {type(mask)} data type')
+    return mask
+
+
+

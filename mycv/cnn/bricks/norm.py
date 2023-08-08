@@ -3,7 +3,7 @@ import inspect
 
 import torch.nn as nn
 
-from .registry import NORM_LAYERS
+from .registry import NORM_LAYERS, PLUGIN_LAYERS
 from mycv.utils.parrots_wrapper import _InstanceNorm, _BatchNorm, SyncBatchNorm
 
 
@@ -108,5 +108,43 @@ def build_norm_layer(cfg: Dict,
 
     for param in layer.parameters():
         param.requires_grad = requires_grad
+
+    return name, layer
+
+
+def build_plugin_layer(cfg: Dict,
+                       postfix: Union[int, str] = '',
+                       **kwargs) -> Tuple[str, nn.Module]:
+    """Build plugin layer.
+
+    Args:
+        cfg (dict): cfg should contain:
+
+            - type (str): identify plugin layer type.
+            - layer args: args needed to instantiate a plugin layer.
+        postfix (int, str): appended into norm abbreviation to
+            create named layer. Default: ''.
+
+    Returns:
+        tuple[str, nn.Module]: The first one is the concatenation of
+        abbreviation and postfix. The second is the created plugin layer.
+    """
+    if not isinstance(cfg, dict):
+        raise TypeError('cfg must be a dict')
+    if 'type' not in cfg:
+        raise KeyError('the cfg dict must contain the key "type"')
+    cfg_ = cfg.copy()
+
+    layer_type = cfg_.pop('type')
+    if layer_type not in PLUGIN_LAYERS:
+        raise KeyError(f'Unrecognized plugin type {layer_type}')
+
+    plugin_layer = PLUGIN_LAYERS.get(layer_type)
+    abbr = infer_abbr(plugin_layer)
+
+    assert isinstance(postfix, (int, str))
+    name = abbr + str(postfix)
+
+    layer = plugin_layer(**kwargs, **cfg_)
 
     return name, layer

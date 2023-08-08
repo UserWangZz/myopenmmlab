@@ -1,4 +1,5 @@
 import warnings
+import mycv
 
 from myocr.myocr.core import imshow_pred_boundary
 
@@ -44,7 +45,7 @@ class TextDetectorMixin:
             out_file (str or None): The filename to write the image.
                 Default: None.imshow_pred_boundary`
         """
-        img = mmcv.imread(img)
+        img = mycv.imread(img)
         img = img.copy()
         boundaries = None
         labels = None

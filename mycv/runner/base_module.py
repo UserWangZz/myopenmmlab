@@ -90,9 +90,9 @@ class BaseModule(nn.Module, metaclass=ABCMeta):
                 sub_module._params_init_info = self._params_init_info
 
         # Get the initialized logger, if not exist,
-        # create a logger named `mmcv`
+        # create a logger named `mycv`
         logger_names = list(logger_initialized.keys())
-        logger_name = logger_names[0] if logger_names else 'mmcv'
+        logger_name = logger_names[0] if logger_names else 'mycv'
 
         from ..cnn import initialize
         from ..cnn.utils.weight_init import update_init_info

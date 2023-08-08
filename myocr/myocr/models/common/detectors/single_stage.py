@@ -1,14 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
 
-from mmdet.models.detectors import SingleStageDetector as MMDET_SingleStageDetector
+from .base_single_stage import BaseSingleStageDetector as BASE_SingleStageDetector
 
 from myocr.myocr.models.builder import (DETECTORS, build_backbone, build_head,
                                   build_neck)
 
 
 @DETECTORS.register_module()
-class SingleStageDetector(MMDET_SingleStageDetector):
+class SingleStageDetector(BASE_SingleStageDetector):
     """Base class for single-stage detectors.
 
     Single-stage detectors directly and densely predict bounding boxes on the
@@ -23,7 +23,7 @@ class SingleStageDetector(MMDET_SingleStageDetector):
                  test_cfg=None,
                  pretrained=None,
                  init_cfg=None):
-        super(MMDET_SingleStageDetector, self).__init__(init_cfg=init_cfg)
+        super(BASE_SingleStageDetector, self).__init__(init_cfg=init_cfg)
         if pretrained:
             warnings.warn('DeprecationWarning: pretrained is deprecated, '
                           'please use "init_cfg" instead')

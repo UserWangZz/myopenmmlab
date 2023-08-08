@@ -1,12 +1,14 @@
 import copy
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional
 
 import torch
 import torch.nn as nn
+import numpy as np
 
-from mycv.utils import build_from_cfg, Registry
+from mycv.utils import build_from_cfg, Registry, get_logger, print_log
 
 INITIALIZERS = Registry('initializer')
+
 
 def update_init_info(module: nn.Module, init_info: str) -> None:
     """Update the `_params_init_info` in the module if the value of parameters
@@ -39,6 +41,7 @@ def update_init_info(module: nn.Module, init_info: str) -> None:
             module._params_init_info[param]['init_info'] = init_info
             module._params_init_info[param]['tmp_mean_value'] = mean_value
 
+
 def _initialize(module: nn.Module,
                 cfg: Dict,
                 wholemodule: bool = False) -> None:
@@ -48,6 +51,7 @@ def _initialize(module: nn.Module,
     # in override.
     func.wholemodule = wholemodule
     func(module)
+
 
 def _initialize_override(module: nn.Module, override: Union[Dict, List],
                          cfg: Dict) -> None:
@@ -152,11 +156,47 @@ def initialize(module: nn.Module, init_cfg: Union[Dict, List[dict]]) -> None:
             # All attributes in module have same initialization.
             pass
 
+
+def bias_init_with_prob(prior_prob: float) -> float:
+    """initialize conv/fc bias value according to a given probability value."""
+    bias_init = float(-np.log((1 - prior_prob) / prior_prob))
+    return bias_init
+
+
+def _get_bases_name(m: nn.Module) -> List[str]:
+    return [b.__name__ for b in m.__class__.__bases__]
+
+
 def constant_init(module: nn.Module, val: float, bias: float = 0) -> None:
     if hasattr(module, 'weight') and module.weight is not None:
         nn.init.constant_(module.weight, val)
     if hasattr(module, 'bias') and module.bias is not None:
         nn.init.constant_(module.bias, bias)
+
+
+def xavier_init(module: nn.Module,
+                gain: float = 1,
+                bias: float = 0,
+                distribution: str = 'normal') -> None:
+    assert distribution in ['uniform', 'normal']
+    if hasattr(module, 'weight') and module.weight is not None:
+        if distribution == 'uniform':
+            nn.init.xavier_uniform_(module.weight, gain=gain)
+        else:
+            nn.init.xavier_normal_(module.weight, gain=gain)
+    if hasattr(module, 'bias') and module.bias is not None:
+        nn.init.constant_(module.bias, bias)
+
+
+def normal_init(module: nn.Module,
+                mean: float = 0,
+                std: float = 1,
+                bias: float = 0) -> None:
+    if hasattr(module, 'weight') and module.weight is not None:
+        nn.init.normal_(module.weight, mean, std)
+    if hasattr(module, 'bias') and module.bias is not None:
+        nn.init.constant_(module.bias, bias)
+
 
 def kaiming_init(module: nn.Module,
                  a: float = 0,
@@ -174,3 +214,280 @@ def kaiming_init(module: nn.Module,
                 module.weight, a=a, mode=mode, nonlinearity=nonlinearity)
     if hasattr(module, 'bias') and module.bias is not None:
         nn.init.constant_(module.bias, bias)
+
+
+class BaseInit:
+
+    def __init__(self,
+                 *,
+                 bias: float = 0,
+                 bias_prob: Optional[float] = None,
+                 layer: Union[str, List, None] = None):
+        self.wholemodule = False
+        if not isinstance(bias, (int, float)):
+            raise TypeError(f'bias must be a number, but got a {type(bias)}')
+
+        if bias_prob is not None:
+            if not isinstance(bias_prob, float):
+                raise TypeError(f'bias_prob type must be float, \
+                    but got {type(bias_prob)}')
+
+        if layer is not None:
+            if not isinstance(layer, (str, list)):
+                raise TypeError(f'layer must be a str or a list of str, \
+                    but got a {type(layer)}')
+        else:
+            layer = []
+
+        if bias_prob is not None:
+            self.bias = bias_init_with_prob(bias_prob)
+        else:
+            self.bias = bias
+        self.layer = [layer] if isinstance(layer, str) else layer
+
+    def _get_init_info(self) -> str:
+        info = f'{self.__class__.__name__}, bias={self.bias}'
+        return info
+
+
+@INITIALIZERS.register_module(name='Constant')
+class ConstantInit(BaseInit):
+    """Initialize module parameters with constant values.
+
+    Args:
+        val (int | float): the value to fill the weights in the module with
+        bias (int | float): the value to fill the bias. Defaults to 0.
+        bias_prob (float, optional): the probability for bias initialization.
+            Defaults to None.
+        layer (str | list[str], optional): the layer will be initialized.
+            Defaults to None.
+    """
+
+    def __init__(self, val: Union[int, float], **kwargs):
+        super().__init__(**kwargs)
+        self.val = val
+
+    def __call__(self, module: nn.Module) -> None:
+
+        def init(m):
+            if self.wholemodule:
+                constant_init(m, self.val, self.bias)
+            else:
+                layername = m.__class__.__name__
+                basesname = _get_bases_name(m)
+                if len(set(self.layer) & set([layername] + basesname)):
+                    constant_init(m, self.val, self.bias)
+
+        module.apply(init)
+        if hasattr(module, '_params_init_info'):
+            update_init_info(module, init_info=self._get_init_info())
+
+    def _get_init_info(self) -> str:
+        info = f'{self.__class__.__name__}: val={self.val}, bias={self.bias}'
+        return info
+
+
+@INITIALIZERS.register_module(name='Xavier')
+class XavierInit(BaseInit):
+    r"""Initialize module parameters with values according to the method
+    described in `Understanding the difficulty of training deep feedforward.
+
+    neural networks - Glorot, X. & Bengio, Y. (2010).
+    <http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf>`_
+
+    Args:
+        gain (int | float): an optional scaling factor. Defaults to 1.
+        bias (int | float): the value to fill the bias. Defaults to 0.
+        bias_prob (float, optional): the probability for bias initialization.
+            Defaults to None.
+        distribution (str): distribution either be ``'normal'``
+            or ``'uniform'``. Defaults to ``'normal'``.
+        layer (str | list[str], optional): the layer will be initialized.
+            Defaults to None.
+    """
+
+    def __init__(self,
+                 gain: float = 1,
+                 distribution: str = 'normal',
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.gain = gain
+        self.distribution = distribution
+
+    def __call__(self, module: nn.Module) -> None:
+
+        def init(m):
+            if self.wholemodule:
+                xavier_init(m, self.gain, self.bias, self.distribution)
+            else:
+                layername = m.__class__.__name__
+                basesname = _get_bases_name(m)
+                if len(set(self.layer) & set([layername] + basesname)):
+                    xavier_init(m, self.gain, self.bias, self.distribution)
+
+        module.apply(init)
+        if hasattr(module, '_params_init_info'):
+            update_init_info(module, init_info=self._get_init_info())
+
+    def _get_init_info(self) -> str:
+        info = f'{self.__class__.__name__}: gain={self.gain}, ' \
+               f'distribution={self.distribution}, bias={self.bias}'
+        return info
+
+
+@INITIALIZERS.register_module(name='Normal')
+class NormalInit(BaseInit):
+    r"""Initialize module parameters with the values drawn from the normal
+    distribution :math:`\mathcal{N}(\text{mean}, \text{std}^2)`.
+
+    Args:
+        mean (int | float):the mean of the normal distribution. Defaults to 0.
+        std (int | float): the standard deviation of the normal distribution.
+            Defaults to 1.
+        bias (int | float): the value to fill the bias. Defaults to 0.
+        bias_prob (float, optional): the probability for bias initialization.
+            Defaults to None.
+        layer (str | list[str], optional): the layer will be initialized.
+            Defaults to None.
+    """
+
+    def __init__(self, mean: float = 0, std: float = 1, **kwargs):
+        super().__init__(**kwargs)
+        self.mean = mean
+        self.std = std
+
+    def __call__(self, module: nn.Module) -> None:
+
+        def init(m):
+            if self.wholemodule:
+                normal_init(m, self.mean, self.std, self.bias)
+            else:
+                layername = m.__class__.__name__
+                basesname = _get_bases_name(m)
+                if len(set(self.layer) & set([layername] + basesname)):
+                    normal_init(m, self.mean, self.std, self.bias)
+
+        module.apply(init)
+        if hasattr(module, '_params_init_info'):
+            update_init_info(module, init_info=self._get_init_info())
+
+    def _get_init_info(self) -> str:
+        info = f'{self.__class__.__name__}: mean={self.mean},' \
+               f' std={self.std}, bias={self.bias}'
+        return info
+
+
+@INITIALIZERS.register_module(name='Kaiming')
+class KaimingInit(BaseInit):
+    r"""Initialize module parameters with the values according to the method
+    described in `Delving deep into rectifiers: Surpassing human-level.
+
+    performance on ImageNet classification - He, K. et al. (2015).
+    <https://www.cv-foundation.org/openaccess/content_iccv_2015/
+    papers/He_Delving_Deep_into_ICCV_2015_paper.pdf>`_
+
+    Args:
+        a (int | float): the negative slope of the rectifier used after this
+            layer (only used with ``'leaky_relu'``). Defaults to 0.
+        mode (str):  either ``'fan_in'`` or ``'fan_out'``. Choosing
+            ``'fan_in'`` preserves the magnitude of the variance of the weights
+            in the forward pass. Choosing ``'fan_out'`` preserves the
+            magnitudes in the backwards pass. Defaults to ``'fan_out'``.
+        nonlinearity (str): the non-linear function (`nn.functional` name),
+            recommended to use only with ``'relu'`` or ``'leaky_relu'`` .
+            Defaults to 'relu'.
+        bias (int | float): the value to fill the bias. Defaults to 0.
+        bias_prob (float, optional): the probability for bias initialization.
+            Defaults to None.
+        distribution (str): distribution either be ``'normal'`` or
+            ``'uniform'``. Defaults to ``'normal'``.
+        layer (str | list[str], optional): the layer will be initialized.
+            Defaults to None.
+    """
+
+    def __init__(self,
+                 a: float = 0,
+                 mode: str = 'fan_out',
+                 nonlinearity: str = 'relu',
+                 distribution: str = 'normal',
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.a = a
+        self.mode = mode
+        self.nonlinearity = nonlinearity
+        self.distribution = distribution
+
+    def __call__(self, module: nn.Module) -> None:
+
+        def init(m):
+            if self.wholemodule:
+                kaiming_init(m, self.a, self.mode, self.nonlinearity,
+                             self.bias, self.distribution)
+            else:
+                layername = m.__class__.__name__
+                basesname = _get_bases_name(m)
+                if len(set(self.layer) & set([layername] + basesname)):
+                    kaiming_init(m, self.a, self.mode, self.nonlinearity,
+                                 self.bias, self.distribution)
+
+        module.apply(init)
+        if hasattr(module, '_params_init_info'):
+            update_init_info(module, init_info=self._get_init_info())
+
+    def _get_init_info(self) -> str:
+        info = f'{self.__class__.__name__}: a={self.a}, mode={self.mode}, ' \
+               f'nonlinearity={self.nonlinearity}, ' \
+               f'distribution ={self.distribution}, bias={self.bias}'
+        return info
+
+
+@INITIALIZERS.register_module(name='Pretrained')
+class PretrainedInit:
+    """Initialize module by loading a pretrained model.
+
+    Args:
+        checkpoint (str): the checkpoint file of the pretrained model should
+            be load.
+        prefix (str, optional): the prefix of a sub-module in the pretrained
+            model. it is for loading a part of the pretrained model to
+            initialize. For example, if we would like to only load the
+            backbone of a detector model, we can set ``prefix='backbone.'``.
+            Defaults to None.
+        map_location (str): map tensors into proper locations.
+    """
+
+    def __init__(self,
+                 checkpoint: str,
+                 prefix: Optional[str] = None,
+                 map_location: Optional[str] = None):
+        self.checkpoint = checkpoint
+        self.prefix = prefix
+        self.map_location = map_location
+
+    def __call__(self, module: nn.Module) -> None:
+        from mycv.runner import (_load_checkpoint_with_prefix, load_checkpoint,
+                                 load_state_dict)
+        logger = get_logger('mycv')
+        if self.prefix is None:
+            print_log(f'load model from: {self.checkpoint}', logger=logger)
+            load_checkpoint(
+                module,
+                self.checkpoint,
+                map_location=self.map_location,
+                strict=False,
+                logger=logger)
+        else:
+            print_log(
+                f'load {self.prefix} in model from: {self.checkpoint}',
+                logger=logger)
+            state_dict = _load_checkpoint_with_prefix(
+                self.prefix, self.checkpoint, map_location=self.map_location)
+            load_state_dict(module, state_dict, strict=False, logger=logger)
+
+        if hasattr(module, '_params_init_info'):
+            update_init_info(module, init_info=self._get_init_info())
+
+    def _get_init_info(self) -> str:
+        info = f'{self.__class__.__name__}: load from {self.checkpoint}'
+        return info
+

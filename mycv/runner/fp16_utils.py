@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from mmcv.utils import TORCH_VERSION, digit_version
+from mycv.utils import TORCH_VERSION, digit_version
 
 try:
     from torch.cuda.amp import autocast
