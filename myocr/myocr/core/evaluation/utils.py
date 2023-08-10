@@ -145,3 +145,61 @@ def poly_intersection(poly_det, poly_gt, invalid_ret=None, return_poly=False):
         poly_obj = poly_det.intersection(poly_gt)
         area = poly_obj.area
     return (area, poly_obj) if return_poly else area
+
+
+def filter_2dlist_result(results, scores, score_thr):
+    """Find out detected results whose score > score_thr.
+
+    Args:
+        results (list[list[float]]): The result list.
+        score (list): The score list.
+        score_thr (float): The score threshold.
+    Returns:
+        valid_results (list[list[float]]): The valid results.
+        valid_score (list[float]): The scores which correspond to the valid
+            results.
+    """
+    assert isinstance(results, list)
+    assert len(results) == len(scores)
+    assert isinstance(score_thr, float)
+    assert 0 <= score_thr <= 1
+
+    inds = np.array(scores) > score_thr
+    valid_results = [results[idx] for idx in np.where(inds)[0].tolist()]
+    valid_scores = [scores[idx] for idx in np.where(inds)[0].tolist()]
+    return valid_results, valid_scores
+
+
+def select_top_boundary(boundaries_list, scores_list, score_thr):
+    """Select poly boundaries with scores >= score_thr.
+
+    Args:
+        boundaries_list (list[list[list[float]]]): List of boundaries.
+            The 1st, 2nd, and 3rd indices are for image, text and
+            vertice, respectively.
+        scores_list (list(list[float])): List of lists of scores.
+        score_thr (float): The score threshold to filter out bboxes.
+
+    Returns:
+        selected_bboxes (list[list[list[float]]]): List of boundaries.
+            The 1st, 2nd, and 3rd indices are for image, text and vertice,
+            respectively.
+    """
+    assert isinstance(boundaries_list, list)
+    assert isinstance(scores_list, list)
+    assert isinstance(score_thr, float)
+    assert len(boundaries_list) == len(scores_list)
+    assert 0 <= score_thr <= 1
+
+    selected_boundaries = []
+    for boundary, scores in zip(boundaries_list, scores_list):
+        if len(scores) > 0:
+            assert len(scores) == len(boundary)
+            inds = [
+                iter for iter in range(len(scores))
+                if scores[iter] >= score_thr
+            ]
+            selected_boundaries.append([boundary[i] for i in inds])
+        else:
+            selected_boundaries.append(boundary)
+    return selected_boundaries

@@ -1,4 +1,5 @@
 output
+myocr/data
 .idea
 *.pyc
 *.log

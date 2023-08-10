@@ -9,10 +9,12 @@ import torch
 import mycv
 from mycv.utils import Config, DictAction
 from mycv.runner import set_random_seed
+from mycv.utils.logging import get_logger
 
 from myocr.myocr.utils import get_root_logger, collect_env
 from myocr.myocr.apis import init_random_seed
 from myocr.myocr.models import build_detector
+from myocr.myocr.datasets import build_dataset
 
 def parse_args(arg_list=None):
     parser = argparse.ArgumentParser(description='Train a detectors.')
@@ -104,6 +106,7 @@ def run_train_cmd(args):
     # init the logger before other steps
     timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
     log_file = osp.join(cfg.work_dir, f'{timestamp}.log')
+    mycv_logger = get_logger('mycv')
     logger = get_root_logger(log_file=log_file, log_level=cfg.log_level)
 
     # init the meta dict to record some important information such as
@@ -135,7 +138,9 @@ def run_train_cmd(args):
         train_cfg=cfg.get('train_cfg'),
         test_cfg=cfg.get('test_cfg'))
     model.init_weights()
-    print(type(model))
+
+    datasets = [build_dataset(cfg.data.train)]
+    print(type(datasets))
 
 
 def main():
